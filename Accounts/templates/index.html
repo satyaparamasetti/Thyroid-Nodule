@@ -1,0 +1,255 @@
+{% extends 'base.html' %}
+{% block title %}ThyroScan AI — Home{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* ── HERO ── */
+  .hero {
+    min-height: calc(100vh - 62px);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center; padding: 4rem 2rem;
+    position: relative;
+  }
+  .hero-eyebrow {
+    font-family: var(--font-mono); font-size: .75rem;
+    letter-spacing: 4px; text-transform: uppercase; color: var(--accent);
+    display: flex; align-items: center; gap: .75rem; margin-bottom: 2rem;
+  }
+  .hero-eyebrow::before, .hero-eyebrow::after {
+    content: ''; display: block; width: 40px; height: 1px; background: var(--accent);
+  }
+  .hero-title {
+    font-family: var(--font-head); font-size: clamp(3rem, 8vw, 6.5rem);
+    font-weight: 700; line-height: .95; letter-spacing: -1px;
+    color: #fff;
+    margin-bottom: 1.5rem;
+  }
+  .hero-title span {
+    background: linear-gradient(90deg, var(--accent2), var(--accent));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  }
+  .hero-sub {
+    max-width: 560px; font-size: 1.05rem; color: var(--muted);
+    line-height: 1.7; margin-bottom: 2.5rem;
+  }
+  .hero-cta { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; margin-bottom: 4rem; }
+
+  /* ultrasound image mock */
+  .hero-visual {
+    position: relative; width: 340px; height: 240px;
+    border-radius: 16px; overflow: hidden;
+    border: 1px solid var(--border);
+    margin-bottom: 3rem;
+  }
+  .hero-visual-bg {
+    position: absolute; inset: 0;
+    background: radial-gradient(ellipse at 40% 55%, rgba(0,50,80,.9) 0%, #030a10 70%);
+  }
+  .hero-visual canvas { position: absolute; inset: 0; }
+  .hero-visual-label {
+    position: absolute; bottom: .75rem; left: .75rem;
+    font-family: var(--font-mono); font-size: .65rem; color: var(--accent); letter-spacing: 2px;
+  }
+  .hero-visual-corner {
+    position: absolute; width: 14px; height: 14px;
+    border-color: var(--accent); border-style: solid;
+  }
+  .tl { top: 8px; left: 8px; border-width: 2px 0 0 2px; }
+  .tr { top: 8px; right: 8px; border-width: 2px 2px 0 0; }
+  .bl { bottom: 8px; left: 8px; border-width: 0 0 2px 2px; }
+  .br { bottom: 8px; right: 8px; border-width: 0 2px 2px 0; }
+  .detection-box {
+    position: absolute; top: 30%; left: 35%; width: 90px; height: 70px;
+    border: 1.5px solid var(--accent); border-radius: 4px;
+    animation: detectPulse 2.5s ease-in-out infinite;
+  }
+  .detection-box::after {
+    content: 'NODULE DETECTED'; position: absolute; top: -18px; left: 0;
+    font-family: var(--font-mono); font-size: .55rem; color: var(--accent); letter-spacing: 1px;
+  }
+  @keyframes detectPulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+
+  /* ── STATS ROW ── */
+  .stats-row {
+    display: grid; grid-template-columns: repeat(3,1fr); gap: 1px;
+    background: var(--border); border: 1px solid var(--border); border-radius: 12px;
+    overflow: hidden; width: 100%; max-width: 680px; margin: 0 auto 5rem;
+  }
+  .stat-cell {
+    background: var(--card); padding: 1.5rem 1.25rem; text-align: center;
+  }
+  .stat-num {
+    font-family: var(--font-head); font-size: 2.2rem; font-weight: 700; color: var(--accent);
+  }
+  .stat-lbl { font-family: var(--font-mono); font-size: .68rem; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-top: .25rem; }
+
+  /* ── FEATURES ── */
+  .features { padding: 5rem 2rem; max-width: 1100px; margin: 0 auto; }
+  .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr)); gap: 1.25rem; }
+  .feature-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 1.75rem; position: relative; overflow: hidden;
+    transition: border-color .3s, transform .3s;
+  }
+  .feature-card:hover { border-color: var(--accent2); transform: translateY(-3px); }
+  .feature-icon {
+    width: 48px; height: 48px; border-radius: 10px;
+    background: rgba(0,212,255,.08); border: 1px solid rgba(0,212,255,.2);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; margin-bottom: 1rem;
+  }
+  .feature-card h3 { font-size: 1.15rem; margin-bottom: .5rem; color: #fff; }
+  .feature-card p  { font-size: .9rem; color: var(--muted); line-height: 1.6; }
+
+  /* ── HOW IT WORKS ── */
+  .how { padding: 5rem 2rem; max-width: 900px; margin: 0 auto; text-align: center; }
+  .steps { display: flex; gap: 0; align-items: flex-start; margin-top: 3rem; flex-wrap: wrap; justify-content: center; }
+  .step { flex: 1; min-width: 180px; padding: 1.5rem 1rem; position: relative; }
+  .step:not(:last-child)::after {
+    content: '→'; position: absolute; right: -10px; top: 1.8rem;
+    color: var(--accent2); font-size: 1.2rem;
+  }
+  .step-num {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-weight: 700; font-size: .9rem; color: #000;
+    margin: 0 auto .75rem;
+  }
+  .step h4 { font-size: 1rem; margin-bottom: .4rem; color: #fff; }
+  .step p  { font-size: .82rem; color: var(--muted); }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-eyebrow">Thyroid Ultrasound Analysis</div>
+  <h1 class="hero-title">Thyroid Nodule Detection</h1>
+  <p class="hero-sub">
+    Advanced deep learning pipeline for benign vs malignant thyroid nodule classification using CNN and EfficientNet architectures.
+  </p>
+  <div class="hero-cta">
+    <a href="{% url 'register' %}" class="btn btn-primary">Get Started →</a>
+    <a href="{% url 'login' %}" class="btn btn-outline">Sign In</a>
+  </div>
+
+  <!-- Fake ultrasound widget -->
+  <div class="hero-visual">
+    <div class="hero-visual-bg"></div>
+    <canvas id="usc" width="340" height="240"></canvas>
+    <div class="detection-box"></div>
+    <div class="hero-visual-corner tl"></div>
+    <div class="hero-visual-corner tr"></div>
+    <div class="hero-visual-corner bl"></div>
+    <div class="hero-visual-corner br"></div>
+    <div class="hero-visual-label">⬤ LIVE SCAN — US MODE</div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-cell"><div class="stat-num">96.4%</div><div class="stat-lbl">Accuracy</div></div>
+    <div class="stat-cell"><div class="stat-num">2</div><div class="stat-lbl">Classes</div></div>
+    <div class="stat-cell"><div class="stat-num">&lt;2s</div><div class="stat-lbl">Inference</div></div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features">
+  <div style="text-align:center; margin-bottom:3rem;">
+    <div class="section-label">Capabilities</div>
+    <h2 style="font-size:2rem; color:#fff;">What ThyroScan Offers</h2>
+  </div>
+  <div class="features-grid">
+    <div class="feature-card">
+      <div class="feature-icon">🧠</div>
+      <h3>CNN Classification</h3>
+      <p>Custom convolutional neural network trained on real thyroid ultrasound images with data augmentation.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">⚡</div>
+      <h3>EfficientNet Inference</h3>
+      <p>Pre-trained EfficientNet model from HuggingFace for rapid, production-grade prediction.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📊</div>
+      <h3>Detailed Metrics</h3>
+      <p>Precision, recall, F1-score, and confusion matrix reports for full model transparency.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🔒</div>
+      <h3>Secure Access</h3>
+      <p>Role-based access control with admin-activated accounts for clinical data privacy.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">📁</div>
+      <h3>Dataset Explorer</h3>
+      <p>Browse the full training dataset of benign and malignant nodule images.</p>
+    </div>
+    <div class="feature-card">
+      <div class="feature-icon">🎯</div>
+      <h3>Upload & Detect</h3>
+      <p>Upload any thyroid ultrasound image and receive an instant benign/malignant classification.</p>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how">
+  <div class="section-label">Workflow</div>
+  <h2 style="font-size:2rem; color:#fff;">How It Works</h2>
+  <div class="steps">
+    <div class="step">
+      <div class="step-num">01</div>
+      <h4>Register</h4>
+      <p>Create an account and await admin approval</p>
+    </div>
+    <div class="step">
+      <div class="step-num">02</div>
+      <h4>Upload</h4>
+      <p>Submit your thyroid ultrasound image</p>
+    </div>
+    <div class="step">
+      <div class="step-num">03</div>
+      <h4>Analyze</h4>
+      <p>AI classifies the nodule in real-time</p>
+    </div>
+    <div class="step">
+      <div class="step-num">04</div>
+      <h4>Report</h4>
+      <p>Receive detailed classification output</p>
+    </div>
+  </div>
+</section>
+
+<script>
+  // ── animated ultrasound noise ──
+  const canvas = document.getElementById('usc');
+  const ctx = canvas.getContext('2d');
+  let t = 0;
+  function draw() {
+    ctx.clearRect(0,0,340,240);
+    for(let y=0;y<240;y+=3){
+      for(let x=0;x<340;x+=3){
+        const n = Math.random();
+        const dist = Math.sqrt(Math.pow(x-170,2)+Math.pow(y-130,2));
+        const fade = Math.max(0,1-dist/140);
+        const v = n * fade * 60;
+        ctx.fillStyle = `rgba(${Math.round(v*.3)},${Math.round(v*.6)},${Math.round(v)},${fade*.6})`;
+        ctx.fillRect(x,y,3,3);
+      }
+    }
+    // scan line
+    const sl = (t % 240);
+    const grad = ctx.createLinearGradient(0,sl-10,0,sl+10);
+    grad.addColorStop(0,'transparent');
+    grad.addColorStop(.5,'rgba(0,212,255,.18)');
+    grad.addColorStop(1,'transparent');
+    ctx.fillStyle = grad; ctx.fillRect(0,sl-10,340,20);
+    t+=1.5;
+    requestAnimationFrame(draw);
+  }
+  draw();
+</script>
+{% endblock %}

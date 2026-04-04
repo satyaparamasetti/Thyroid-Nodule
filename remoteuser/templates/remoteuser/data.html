@@ -1,0 +1,106 @@
+{% extends 'remoteuser/user_page.html' %}
+{% block title %}Dataset — Thyroid Nodule Detection{% endblock %}
+{% block nav_data %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+  .page-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2rem; }
+  .page-header h2 { font-size: 2rem; color: #fff; }
+
+  .filter-bar {
+    display: flex; gap: .75rem; margin-bottom: 1.5rem; flex-wrap: wrap; align-items: center;
+  }
+  .filter-chip {
+    padding: .35rem .9rem; border-radius: 20px;
+    font-family: var(--font-mono); font-size: .7rem; letter-spacing: 1px; text-transform: uppercase;
+    cursor: pointer; border: 1px solid var(--border); color: var(--muted); background: transparent;
+    transition: all .2s;
+  }
+  .filter-chip.active, .filter-chip:hover { border-color: var(--accent); color: var(--accent); background: rgba(0,212,255,.08); }
+
+  .images-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 1rem;
+  }
+  .img-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+    overflow: hidden; cursor: pointer;
+    transition: border-color .2s, transform .2s;
+    position: relative;
+  }
+  .img-card:hover { border-color: var(--accent2); transform: scale(1.02); }
+  .img-card img {
+    width: 100%; aspect-ratio: 1; object-fit: cover; display: block;
+    filter: grayscale(30%);
+    transition: filter .2s;
+  }
+  .img-card:hover img { filter: grayscale(0); }
+  .img-meta {
+    padding: .6rem .75rem;
+    font-family: var(--font-mono); font-size: .65rem; color: var(--muted);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .img-label {
+    position: absolute; top: .5rem; right: .5rem;
+    background: rgba(6,13,20,.85); backdrop-filter: blur(6px);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: .15rem .5rem;
+    font-family: var(--font-mono); font-size: .58rem; color: var(--success); letter-spacing: 1px;
+  }
+
+  .empty-state {
+    text-align: center; padding: 4rem 2rem; color: var(--muted);
+    font-family: var(--font-mono);
+  }
+  .empty-state .big-icon { font-size: 3rem; margin-bottom: 1rem; }
+
+  .count-pill {
+    display: inline-flex; align-items: center; gap: .4rem;
+    background: rgba(0,212,255,.08); border: 1px solid rgba(0,212,255,.2);
+    border-radius: 20px; padding: .3rem .8rem;
+    font-family: var(--font-mono); font-size: .7rem; color: var(--accent);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <div class="section-label">Training Data</div>
+    <h2>Benign Dataset Preview</h2>
+  </div>
+  <div class="count-pill">🖼️ Showing {{ images|length }} Images</div>
+</div>
+
+<div class="filter-bar">
+  <span style="font-family:var(--font-mono);font-size:.7rem;color:var(--muted);">Class:</span>
+  <button class="filter-chip active">Benign</button>
+  <button class="filter-chip">Malignant</button>
+  <button class="filter-chip">All</button>
+</div>
+
+{% if images %}
+  <div class="images-grid">
+    {% for image in images %}
+    <div class="img-card">
+      <div class="img-label">BENIGN</div>
+      <img src="/static/train/benign/{{ image }}" alt="{{ image }}" 
+           onerror="this.parentElement.style.display='none'"/>
+      <div class="img-meta">
+        <span>{{ image|truncatechars:18 }}</span>
+        <span>US</span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card">
+    <div class="empty-state">
+      <div class="big-icon">🖼️</div>
+      <p>No images found in the dataset directory.</p>
+      <p style="font-size:.75rem; margin-top:.5rem;">Expected path: static/train/benign/</p>
+    </div>
+  </div>
+{% endif %}
+{% endblock %}

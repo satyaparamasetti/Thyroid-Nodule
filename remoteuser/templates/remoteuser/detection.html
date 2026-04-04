@@ -1,0 +1,205 @@
+{% extends 'remoteuser/user_page.html' %}
+{% block title %}Detect Nodule — Thyroid Nodule Detection{% endblock %}
+{% block nav_classify %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+  .detect-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+  @media(max-width:760px){ .detect-grid { grid-template-columns: 1fr; } }
+
+  .upload-zone {
+    border: 2px dashed var(--border); border-radius: 14px;
+    padding: 2.5rem; text-align: center; cursor: pointer;
+    transition: border-color .25s, background .25s;
+    background: rgba(255,255,255,.02);
+    position: relative;
+  }
+  .upload-zone:hover, .upload-zone.drag-over {
+    border-color: var(--accent); background: rgba(0,212,255,.05);
+  }
+  .upload-zone input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon { font-size: 2.5rem; margin-bottom: .75rem; }
+  .upload-zone h3 { font-size: 1.1rem; color: #fff; margin-bottom: .35rem; }
+  .upload-zone p  { font-size: .82rem; color: var(--muted); }
+  .preview-img {
+    width: 100%; border-radius: 10px; margin-top: 1.25rem;
+    border: 1px solid var(--border); display: none;
+    filter: grayscale(20%);
+  }
+  .btn-full { width: 100%; justify-content: center; padding: .85rem; margin-top: 1rem; font-size: .95rem; }
+
+  /* Result card */
+  .result-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 2rem; text-align: center; position: relative; overflow: hidden;
+  }
+  .result-card.benign    { border-color: rgba(0,245,160,.3); background: rgba(0,245,160,.04); }
+  .result-card.malignant { border-color: rgba(255,77,109,.3); background: rgba(255,77,109,.04); }
+  .result-card.error     { border-color: rgba(244,162,97,.3); background: rgba(244,162,97,.04); }
+
+  .result-icon { font-size: 3.5rem; margin-bottom: 1rem; }
+  .result-label-text {
+    font-family: var(--font-head); font-size: 1.75rem; font-weight: 700; margin-bottom: .5rem;
+  }
+  .result-label-text.benign    { color: var(--success); }
+  .result-label-text.malignant { color: var(--danger); }
+  .result-label-text.error     { color: var(--warn); }
+
+  .confidence-ring {
+    width: 120px; height: 120px; border-radius: 50%;
+    border: 6px solid var(--border);
+    display: flex; align-items: center; justify-content: center;
+    margin: 1.25rem auto;
+    position: relative;
+    font-family: var(--font-head); font-size: 1.5rem; color: #fff; font-weight: 700;
+  }
+  .confidence-ring.benign    { border-color: var(--success); box-shadow: 0 0 20px rgba(0,245,160,.2); }
+  .confidence-ring.malignant { border-color: var(--danger);  box-shadow: 0 0 20px rgba(255,77,109,.2); }
+
+  .info-steps { display: flex; flex-direction: column; gap: .75rem; margin-top: 1.5rem; }
+  .info-step {
+    display: flex; align-items: flex-start; gap: .75rem;
+    background: rgba(255,255,255,.03); border: 1px solid var(--border);
+    border-radius: 8px; padding: .85rem;
+  }
+  .info-step .num {
+    width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0;
+    background: rgba(0,212,255,.1); border: 1px solid rgba(0,212,255,.2);
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-mono); font-size: .72rem; color: var(--accent);
+  }
+  .info-step div h4 { font-size: .9rem; color: var(--text); margin-bottom: .2rem; }
+  .info-step div p  { font-size: .78rem; color: var(--muted); }
+
+  .empty-result {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    padding: 3rem; text-align: center; gap: 1rem;
+  }
+  .empty-result .big { font-size: 3rem; }
+  .empty-result p { color: var(--muted); font-size: .9rem; max-width: 260px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div style="margin-bottom:2rem;">
+  <div class="section-label">Thyroid Classification</div>
+  <h2 style="font-size:2rem; color:#fff;">Nodule Detection</h2>
+</div>
+
+<div class="detect-grid">
+  <!-- Upload -->
+  <div>
+    <div class="card" style="margin-bottom:1.5rem;">
+      <div class="scanline"></div>
+      <div class="section-label">Input</div>
+      <h3 style="color:#fff; margin-bottom:1rem;">Upload Ultrasound Image</h3>
+      <form method="POST" enctype="multipart/form-data" id="uploadForm">
+        {% csrf_token %}
+        <div class="upload-zone" id="dropzone">
+          <input type="file" name="image" accept="image/*" id="imgInput" required />
+          <div class="upload-icon">🔬</div>
+          <h3>Drop image here or click to browse</h3>
+          <p>Supports JPG, PNG, JPEG • Thyroid ultrasound images</p>
+          <img id="preview" class="preview-img" src="" alt="Preview" />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">
+          ⚡ Classify Image
+        </button>
+      </form>
+    </div>
+
+    <div class="card">
+      <div class="section-label">How It Works</div>
+      <div class="info-steps">
+        <div class="info-step">
+          <div class="num">1</div>
+          <div><h4>Image Preprocessing</h4><p>Image resized and normalized by EfficientNet processor</p></div>
+        </div>
+        <div class="info-step">
+          <div class="num">2</div>
+          <div><h4>Model Inference</h4><p>EfficientNet runs forward pass on the preprocessed tensor</p></div>
+        </div>
+        <div class="info-step">
+          <div class="num">3</div>
+          <div><h4>Classification</h4><p>Logits converted to class label: Benign or Malignant</p></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Result -->
+  <div>
+    {% if predicted_label %}
+      {% if predicted_label == 'Invalid image' %}
+        <div class="result-card error">
+          <div class="result-icon">⚠️</div>
+          <div class="result-label-text error">Invalid Image</div>
+          <p style="color:var(--muted); font-size:.9rem; margin-top:.5rem;">
+            Could not process the uploaded file. Please ensure it's a valid ultrasound image.
+          </p>
+        </div>
+      {% else %}
+        <div class="result-card {% if 'benign' in predicted_label|lower %}benign{% else %}malignant{% endif %}">
+          <div class="scanline"></div>
+          <div class="result-icon">
+            {% if 'benign' in predicted_label|lower %}✅{% else %}⚠️{% endif %}
+          </div>
+          <div class="section-label">Classification Result</div>
+          <div class="result-label-text {% if 'benign' in predicted_label|lower %}benign{% else %}malignant{% endif %}">
+            {{ predicted_label|upper }}
+          </div>
+          <div class="confidence-ring {% if 'benign' in predicted_label|lower %}benign{% else %}malignant{% endif %}">
+            {{ confidence }}
+          </div>
+          <p style="font-size:.85rem; color:var(--muted); max-width:280px; margin:0 auto; line-height:1.6;">
+            {% if 'benign' in predicted_label|lower %}
+              The nodule appears <strong style="color:var(--success)">benign</strong>. 
+              Please consult a physician for clinical confirmation.
+            {% else %}
+              The nodule shows <strong style="color:var(--danger)">malignant</strong> characteristics.
+              Immediate clinical consultation is strongly recommended.
+            {% endif %}
+          </p>
+          <div style="margin-top:1.5rem; padding:.75rem; background:rgba(255,255,255,.03); border-radius:8px; font-family:var(--font-mono); font-size:.7rem; color:var(--muted);">
+            
+          </div>
+        </div>
+      {% endif %}
+    {% else %}
+      <div class="result-card">
+        <div class="empty-result">
+          <h3 style="color:#fff;">Awaiting Image</h3>
+          <p>Upload a thyroid ultrasound image to receive an AI classification</p>
+        </div>
+      </div>
+    {% endif %}
+  </div>
+</div>
+
+<script>
+  const input = document.getElementById('imgInput');
+  const preview = document.getElementById('preview');
+  const dropzone = document.getElementById('dropzone');
+
+  input.addEventListener('change', function() {
+    if (this.files && this.files[0]) {
+      const reader = new FileReader();
+      reader.onload = e => {
+        preview.src = e.target.result;
+        preview.style.display = 'block';
+      };
+      reader.readAsDataURL(this.files[0]);
+    }
+  });
+
+  dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag-over'); });
+  dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag-over'));
+  dropzone.addEventListener('drop', e => {
+    e.preventDefault(); dropzone.classList.remove('drag-over');
+    input.files = e.dataTransfer.files;
+    input.dispatchEvent(new Event('change'));
+  });
+</script>
+{% endblock %}

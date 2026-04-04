@@ -1,0 +1,272 @@
+{% extends 'remoteuser/user_page.html' %}
+{% block title %}Performance — Thyroid Nodule Detection{% endblock %}
+{% block nav_scores %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+  .page-header { margin-bottom: 2rem; }
+  .page-header h2 { font-size: 2rem; color: #fff; }
+
+  .acc-hero {
+    background: linear-gradient(135deg, rgba(0,212,255,.12), rgba(0,119,182,.06));
+    border: 1px solid rgba(0,212,255,.25); border-radius: 14px;
+    padding: 2rem; margin-bottom: 2rem;
+    display: flex; gap: 2rem; align-items: center; flex-wrap: wrap;
+  }
+  .acc-big {
+    font-family: var(--font-head); font-size: 4.5rem; font-weight: 700;
+    color: var(--accent); line-height: 1;
+  }
+  .acc-label {
+    font-family: var(--font-mono); font-size: .72rem; letter-spacing: 3px;
+    color: var(--muted); margin-top: .25rem; text-transform: uppercase;
+  }
+
+  .metric-row {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(200px,1fr));
+    gap: 1rem; margin-bottom: 2rem;
+  }
+  .metric-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.25rem; text-align: center;
+  }
+  .metric-val { font-family: var(--font-head); font-size: 2rem; font-weight: 700; color: #fff; }
+  .metric-cls { font-family: var(--font-mono); font-size: .65rem; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; margin-bottom: .25rem; }
+  .metric-sub { display: flex; gap: 1rem; justify-content: center; margin-top: .85rem; }
+  .metric-sub-item .val { font-size: .9rem; color: var(--text); font-weight: 600; }
+  .metric-sub-item .lbl { font-family: var(--font-mono); font-size: .55rem; color: var(--muted); }
+
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+  @media(max-width:700px){ .grid-2 { grid-template-columns: 1fr; } }
+
+  .cm-table td { padding: 1rem 1.5rem; text-align: center; font-family: var(--font-mono); font-weight: 700; font-size: 1.1rem; }
+  .cm-tp { color: var(--success); background: rgba(0,245,160,.08); }
+  .cm-tn { color: var(--success); background: rgba(0,245,160,.06); }
+  .cm-fp { color: var(--danger);  background: rgba(255,77,109,.08); }
+  .cm-fn { color: var(--danger);  background: rgba(255,77,109,.06); }
+  .cm-head { font-family: var(--font-mono); font-size: .65rem; color: var(--muted); letter-spacing: 2px; }
+
+  .bar-wrap { margin-bottom: .85rem; }
+  .bar-label { display: flex; justify-content: space-between; margin-bottom: .3rem; font-family: var(--font-mono); font-size: .72rem; color: var(--muted); }
+  .bar-track { background: rgba(255,255,255,.05); border-radius: 4px; height: 10px; overflow: hidden; }
+  .bar-fill  { height: 100%; border-radius: 4px; }
+  .bar-fill.blue  { background: linear-gradient(90deg, var(--accent2), var(--accent)); }
+  .bar-fill.green { background: linear-gradient(90deg, #00a86b, var(--success)); }
+  .bar-fill.warn  { background: linear-gradient(90deg, #c57a1b, var(--warn)); }
+
+  .cls-section-title {
+    font-family: var(--font-mono); font-size: .7rem; color: var(--text);
+    margin-bottom: .5rem; text-transform: uppercase; letter-spacing: 1px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="section-label">Evaluation</div>
+  <h2>Model Performance</h2>
+</div>
+
+<!-- Accuracy hero -->
+<div class="acc-hero">
+  <div>
+    <div class="acc-big">{{ test_acc|floatformat:4 }}</div>
+    <div class="acc-label">Test Accuracy</div>
+  </div>
+  <div style="flex:1; min-width:200px;">
+    <p style="color:var(--muted); font-size:.9rem; line-height:1.7;">
+      CNN model trained on thyroid ultrasound images with data augmentation.
+      Evaluated on held-out 20% test split.
+    </p>
+  </div>
+  <a href="{% url 'classify_image' %}" class="btn btn-primary">🔬 Run Detection →</a>
+</div>
+
+<!-- Per-class metrics — accessed directly from context dict keys -->
+<div class="section-label" style="margin-bottom:.75rem;">Per-Class Metrics</div>
+<div class="metric-row">
+
+  <!-- BENIGN -->
+  {% if report.benign %}
+  <div class="metric-card">
+    <div class="metric-cls">Benign</div>
+    <div class="metric-val">{{ report.benign.f1_score|floatformat:3 }}</div>
+    <div style="font-family:var(--font-mono); font-size:.62rem; color:var(--muted); margin-top:.25rem;">F1-SCORE</div>
+    <div class="metric-sub">
+      <div class="metric-sub-item">
+        <div class="val">{{ report.benign.precision|floatformat:3 }}</div>
+        <div class="lbl">PRECISION</div>
+      </div>
+      <div class="metric-sub-item">
+        <div class="val">{{ report.benign.recall|floatformat:3 }}</div>
+        <div class="lbl">RECALL</div>
+      </div>
+      <div class="metric-sub-item">
+        <div class="val">{{ report.benign.support }}</div>
+        <div class="lbl">SUPPORT</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- MALIGNANT -->
+  {% if report.malignant %}
+  <div class="metric-card">
+    <div class="metric-cls">Malignant</div>
+    <div class="metric-val">{{ report.malignant.f1_score|floatformat:3 }}</div>
+    <div style="font-family:var(--font-mono); font-size:.62rem; color:var(--muted); margin-top:.25rem;">F1-SCORE</div>
+    <div class="metric-sub">
+      <div class="metric-sub-item">
+        <div class="val">{{ report.malignant.precision|floatformat:3 }}</div>
+        <div class="lbl">PRECISION</div>
+      </div>
+      <div class="metric-sub-item">
+        <div class="val">{{ report.malignant.recall|floatformat:3 }}</div>
+        <div class="lbl">RECALL</div>
+      </div>
+      <div class="metric-sub-item">
+        <div class="val">{{ report.malignant.support }}</div>
+        <div class="lbl">SUPPORT</div>
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+</div>
+
+<div class="grid-2">
+
+  <!-- Confusion Matrix -->
+  <div class="card">
+    <div class="scanline"></div>
+    <div class="section-label">Confusion Matrix</div>
+    <h3 style="color:#fff; margin-bottom:1.25rem; font-size:1.05rem;">Prediction vs Actual</h3>
+    {% if confusion_matrix %}
+    <div style="overflow-x:auto;">
+      <table class="cm-table">
+        <thead>
+          <tr>
+            <th></th>
+            <th class="cm-head">PRED: Benign</th>
+            <th class="cm-head">PRED: Malignant</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td style="font-family:var(--font-mono);font-size:.7rem;color:var(--muted);">ACT: Benign</td>
+            <td class="cm-tp">{{ confusion_matrix.0.0 }}</td>
+            <td class="cm-fp">{{ confusion_matrix.0.1 }}</td>
+          </tr>
+          <tr>
+            <td style="font-family:var(--font-mono);font-size:.7rem;color:var(--muted);">ACT: Malignant</td>
+            <td class="cm-fn">{{ confusion_matrix.1.0 }}</td>
+            <td class="cm-tn">{{ confusion_matrix.1.1 }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div style="display:flex; gap:1.5rem; margin-top:1rem; font-family:var(--font-mono); font-size:.65rem;">
+      <span style="color:var(--success);">■ True Positive / Negative</span>
+      <span style="color:var(--danger);">■ False Positive / Negative</span>
+    </div>
+    {% else %}
+    <p style="color:var(--muted); font-size:.9rem;">No confusion matrix data available.</p>
+    {% endif %}
+  </div>
+
+  <!-- Score bars -->
+  <div class="card">
+    <div class="section-label">Score Overview</div>
+    <h3 style="color:#fff; margin-bottom:1.25rem; font-size:1.05rem;">Benign vs Malignant</h3>
+
+    {% if report.benign %}
+    <div style="margin-bottom:1.5rem;">
+      <div class="cls-section-title">Benign</div>
+      <div class="bar-wrap">
+        <div class="bar-label"><span>Precision</span><span>{{ report.benign.precision|floatformat:3 }}</span></div>
+        <div class="bar-track">
+          <div class="bar-fill blue" style="width:{{ report.benign.precision|floatformat:0 }}%"></div>
+        </div>
+      </div>
+      <div class="bar-wrap">
+        <div class="bar-label"><span>Recall</span><span>{{ report.benign.recall|floatformat:3 }}</span></div>
+        <div class="bar-track">
+          <div class="bar-fill green" style="width:{{ report.benign.recall|floatformat:0 }}%"></div>
+        </div>
+      </div>
+      <div class="bar-wrap">
+        <div class="bar-label"><span>F1-Score</span><span>{{ report.benign.f1_score|floatformat:3 }}</span></div>
+        <div class="bar-track">
+          <div class="bar-fill warn" style="width:{{ report.benign.f1_score|floatformat:0 }}%"></div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+    {% if report.malignant %}
+    <div>
+      <div class="cls-section-title">Malignant</div>
+      <div class="bar-wrap">
+        <div class="bar-label"><span>Precision</span><span>{{ report.malignant.precision|floatformat:3 }}</span></div>
+        <div class="bar-track">
+          <div class="bar-fill blue" style="width:{{ report.malignant.precision|floatformat:0 }}%"></div>
+        </div>
+      </div>
+      <div class="bar-wrap">
+        <div class="bar-label"><span>Recall</span><span>{{ report.malignant.recall|floatformat:3 }}</span></div>
+        <div class="bar-track">
+          <div class="bar-fill green" style="width:{{ report.malignant.recall|floatformat:0 }}%"></div>
+        </div>
+      </div>
+      <div class="bar-wrap">
+        <div class="bar-label"><span>F1-Score</span><span>{{ report.malignant.f1_score|floatformat:3 }}</span></div>
+        <div class="bar-track">
+          <div class="bar-fill warn" style="width:{{ report.malignant.f1_score|floatformat:0 }}%"></div>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+
+  </div>
+</div>
+
+<!-- Macro / Weighted averages -->
+{% if report %}
+<div class="card">
+  <div class="section-label">Averages</div>
+  <h3 style="color:#fff; margin-bottom:1rem; font-size:1.05rem;">Macro &amp; Weighted Summary</h3>
+  <table>
+    <thead>
+      <tr>
+        <th>Metric</th>
+        <th>Precision</th>
+        <th>Recall</th>
+        <th>F1-Score</th>
+        <th>Support</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% if report.macro_avg %}
+      <tr>
+        <td style="font-family:var(--font-mono);font-size:.75rem;">Macro Avg</td>
+        <td>{{ report.macro_avg.precision|floatformat:3 }}</td>
+        <td>{{ report.macro_avg.recall|floatformat:3 }}</td>
+        <td>{{ report.macro_avg.f1_score|floatformat:3 }}</td>
+        <td>{{ report.macro_avg.support }}</td>
+      </tr>
+      {% endif %}
+      {% if report.weighted_avg %}
+      <tr>
+        <td style="font-family:var(--font-mono);font-size:.75rem;">Weighted Avg</td>
+        <td>{{ report.weighted_avg.precision|floatformat:3 }}</td>
+        <td>{{ report.weighted_avg.recall|floatformat:3 }}</td>
+        <td>{{ report.weighted_avg.f1_score|floatformat:3 }}</td>
+        <td>{{ report.weighted_avg.support }}</td>
+      </tr>
+      {% endif %}
+    </tbody>
+  </table>
+</div>
+{% endif %}
+
+{% endblock %}

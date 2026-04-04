@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>{% block title %}Thyroid Nodule Detection{% endblock %}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <style>
+    :root {
+      --bg:        #060d14;
+      --surface:   #0b1622;
+      --card:      #0f1e2e;
+      --border:    #1a3048;
+      --accent:    #00d4ff;
+      --accent2:   #0077b6;
+      --danger:    #ff4d6d;
+      --success:   #00f5a0;
+      --text:      #cce7f5;
+      --muted:     #4a7a9b;
+      --font-head: 'Rajdhani', sans-serif;
+      --font-mono: 'Space Mono', monospace;
+      --font-body: 'DM Sans', sans-serif;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-body);
+      min-height: 100vh;
+      overflow-x: hidden;
+      position: relative;
+    }
+
+    /* ── ultrasound grid background ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0; z-index: 0;
+      background-image:
+        radial-gradient(ellipse 80% 60% at 50% -10%, rgba(0,212,255,.12) 0%, transparent 60%),
+        linear-gradient(rgba(0,119,182,.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,119,182,.06) 1px, transparent 1px);
+      background-size: 100% 100%, 40px 40px, 40px 40px;
+      pointer-events: none;
+    }
+    /* floating sonar rings */
+    body::after {
+      content: '';
+      position: fixed;
+      width: 700px; height: 700px;
+      border-radius: 50%;
+      border: 1px solid rgba(0,212,255,.05);
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      box-shadow: 0 0 0 80px rgba(0,212,255,.03),
+                  0 0 0 160px rgba(0,212,255,.02),
+                  0 0 0 240px rgba(0,212,255,.01);
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(6,13,20,.85);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 2.5rem;
+      height: 62px;
+    }
+    .nav-brand {
+      display: flex; align-items: center; gap: .75rem;
+      text-decoration: none;
+    }
+    .nav-brand-icon {
+      width: 36px; height: 36px;
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+    .nav-brand-text {
+      font-family: var(--font-head);
+      font-size: 1.35rem; font-weight: 700; letter-spacing: 2px;
+      color: var(--accent);
+    }
+    .nav-brand-sub { font-size: .6rem; color: var(--muted); letter-spacing: 3px; text-transform: uppercase; display: block; line-height: 1; }
+    .nav-links { display: flex; gap: .25rem; align-items: center; }
+    .nav-links a {
+      color: var(--muted); text-decoration: none;
+      font-family: var(--font-mono); font-size: .78rem; letter-spacing: 1px;
+      padding: .45rem .9rem; border-radius: 6px;
+      transition: color .2s, background .2s;
+      text-transform: uppercase;
+    }
+    .nav-links a:hover, .nav-links a.active {
+      color: var(--accent); background: rgba(0,212,255,.08);
+    }
+    .nav-links .btn-nav {
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      color: #000 !important; font-weight: 700;
+      padding: .45rem 1.1rem;
+    }
+    .nav-links .btn-nav:hover { opacity: .85; background: var(--accent); }
+
+    /* ── PAGE WRAPPER ── */
+    .page { position: relative; z-index: 1; }
+
+    /* ── FOOTER ── */
+    footer {
+      position: relative; z-index: 1;
+      border-top: 1px solid var(--border);
+      padding: 1.5rem 2.5rem;
+      display: flex; justify-content: space-between; align-items: center;
+      font-family: var(--font-mono); font-size: .72rem; color: var(--muted);
+    }
+    .footer-pulse {
+      display: flex; align-items: center; gap: .5rem;
+    }
+    .pulse-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--success);
+      animation: pulse 2s ease-in-out infinite;
+    }
+    @keyframes pulse {
+      0%,100% { opacity: 1; transform: scale(1); }
+      50%      { opacity: .4; transform: scale(.7); }
+    }
+
+    /* ── CARDS / COMMON ── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 1.75rem;
+      position: relative;
+      overflow: hidden;
+    }
+    .card::before {
+      content: '';
+      position: absolute; top: 0; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, var(--accent), transparent);
+      opacity: .4;
+    }
+    .section-label {
+      font-family: var(--font-mono); font-size: .7rem;
+      letter-spacing: 3px; text-transform: uppercase; color: var(--accent);
+      margin-bottom: .5rem;
+    }
+    h1,h2,h3,h4 { font-family: var(--font-head); letter-spacing: 1px; }
+
+    /* ── BUTTONS ── */
+    .btn {
+      display: inline-flex; align-items: center; gap: .5rem;
+      padding: .65rem 1.4rem; border-radius: 8px;
+      font-family: var(--font-mono); font-size: .8rem; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+      cursor: pointer; border: none; text-decoration: none;
+      transition: all .2s;
+    }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent2), var(--accent));
+      color: #000;
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 6px 24px rgba(0,212,255,.35); }
+    .btn-outline {
+      background: transparent; color: var(--accent);
+      border: 1px solid var(--accent);
+    }
+    .btn-outline:hover { background: rgba(0,212,255,.1); }
+    .btn-danger { background: var(--danger); color: #fff; }
+    .btn-danger:hover { opacity: .85; }
+    .btn-success { background: var(--success); color: #000; }
+
+    /* ── FORM FIELDS ── */
+    .form-group { margin-bottom: 1.25rem; }
+    .form-group label {
+      display: block; font-family: var(--font-mono); font-size: .72rem;
+      letter-spacing: 2px; text-transform: uppercase; color: var(--muted);
+      margin-bottom: .5rem;
+    }
+    .form-group input, .form-group select, .form-group textarea {
+      width: 100%; padding: .75rem 1rem;
+      background: rgba(255,255,255,.04); border: 1px solid var(--border);
+      border-radius: 8px; color: var(--text);
+      font-family: var(--font-body); font-size: .95rem;
+      transition: border-color .2s, box-shadow .2s;
+      outline: none;
+    }
+    .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+      border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,212,255,.1);
+    }
+    .form-group input::placeholder { color: var(--muted); }
+
+    /* ── ALERTS ── */
+    .alert {
+      padding: .85rem 1.25rem; border-radius: 8px; margin-bottom: 1rem;
+      font-size: .9rem; border-left: 3px solid;
+    }
+    .alert-error   { background: rgba(255,77,109,.1); border-color: var(--danger); color: #ff8fa3; }
+    .alert-success { background: rgba(0,245,160,.1); border-color: var(--success); color: var(--success); }
+    .alert-info    { background: rgba(0,212,255,.08); border-color: var(--accent); color: var(--accent); }
+
+    /* ── TABLE ── */
+    table { width: 100%; border-collapse: collapse; }
+    th {
+      font-family: var(--font-mono); font-size: .72rem; letter-spacing: 2px;
+      text-transform: uppercase; color: var(--muted);
+      padding: .85rem 1rem; border-bottom: 1px solid var(--border);
+      text-align: left;
+    }
+    td {
+      padding: .85rem 1rem; border-bottom: 1px solid rgba(26,48,72,.5);
+      font-size: .9rem; color: var(--text);
+    }
+    tr:hover td { background: rgba(0,212,255,.03); }
+
+    /* ── BADGE ── */
+    .badge {
+      display: inline-block; padding: .2rem .65rem; border-radius: 20px;
+      font-family: var(--font-mono); font-size: .68rem; font-weight: 700;
+      letter-spacing: 1px; text-transform: uppercase;
+    }
+    .badge-active   { background: rgba(0,245,160,.15); color: var(--success); }
+    .badge-inactive { background: rgba(255,77,109,.15); color: var(--danger); }
+
+    /* scan-line animation overlay */
+    .scanline {
+      position: absolute; inset: 0; pointer-events: none; overflow: hidden; border-radius: inherit;
+    }
+    .scanline::after {
+      content: '';
+      position: absolute; width: 100%; height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(0,212,255,.15), transparent);
+      animation: scan 4s linear infinite;
+    }
+    @keyframes scan { 0%{top:-2px} 100%{top:100%} }
+
+    @media(max-width:768px){
+      nav { padding: 0 1rem; }
+      .nav-links a span { display: none; }
+    }
+  </style>
+  {% block extra_head %}{% endblock %}
+</head>
+<body>
+  <nav>
+    <a class="nav-brand" href="{% url 'home' %}">
+      <div class="nav-brand-icon">🫀</div>
+      <div>
+        <span class="nav-brand-text">Thyroid Nodule Detection</span>
+        <span class="nav-brand-sub"> Nodule Detection</span>
+      </div>
+    </a>
+    <div class="nav-links">
+      <a href="{% url 'home' %}">Home</a>
+      <a href="{% url 'login' %}">User Login</a>
+      <a href="{% url 'admin_login' %}">Admin</a>
+      <a href="{% url 'register' %}" class="btn-nav">Register</a>
+    </div>
+  </nav>
+
+  <div class="page">
+    {% block content %}
+
+    {% endblock %}
+  </div>
+
+  <footer>
+    <div class="footer-pulse">
+      <div class="pulse-dot"></div>
+      System Online — Thyroid Nodule Detection v2.1
+    </div>
+    <div>© 2025 Thyroid Nodule Detection System</div>
+  </footer>
+</body>
+</html>

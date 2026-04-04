@@ -1,0 +1,155 @@
+{% extends 'remoteuser/user_page.html' %}
+{% block title %}Train Model — Thyroid Nodule Detection{% endblock %}
+{% block nav_train %}active{% endblock %}
+
+{% block extra_head %}
+<style>
+  .page-header { margin-bottom: 2rem; }
+  .page-header h2 { font-size: 2rem; color: #fff; }
+
+  .train-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem; }
+  @media(max-width:700px){ .train-grid { grid-template-columns: 1fr; } }
+
+  .config-card {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 1.75rem;
+    position: relative; overflow: hidden;
+  }
+  .config-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 1px;
+    background: linear-gradient(90deg, transparent, var(--accent2), transparent); opacity: .5;
+  }
+  .param-list { list-style: none; display: flex; flex-direction: column; gap: .85rem; margin-top: 1rem; }
+  .param-item {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: .65rem .85rem;
+    background: rgba(255,255,255,.03); border: 1px solid var(--border); border-radius: 8px;
+  }
+  .param-key { font-family: var(--font-mono); font-size: .75rem; color: var(--muted); }
+  .param-val { font-family: var(--font-mono); font-size: .85rem; color: var(--accent); font-weight: 700; }
+
+  .arch-diagram { display: flex; flex-direction: column; gap: .5rem; margin-top: 1rem; }
+  .layer-block {
+    padding: .55rem 1rem; border-radius: 6px;
+    font-family: var(--font-mono); font-size: .72rem;
+    display: flex; justify-content: space-between;
+    background: rgba(0,119,182,.12); border: 1px solid rgba(0,119,182,.25); color: var(--text);
+  }
+  .layer-block.pool  { background: rgba(0,212,255,.06); border-color: rgba(0,212,255,.2); color: var(--accent); }
+  .layer-block.dense { background: rgba(0,245,160,.06); border-color: rgba(0,245,160,.2); color: var(--success); }
+  .layer-block.out   { background: rgba(244,162,97,.06); border-color: rgba(244,162,97,.2); color: var(--warn); }
+  .layer-arrow { text-align: center; color: var(--muted); font-size: .7rem; }
+
+  .aug-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(160px,1fr));
+    gap: .75rem; margin-top: 1rem;
+  }
+  .aug-item {
+    background: rgba(255,255,255,.03); border: 1px solid var(--border);
+    border-radius: 8px; padding: .6rem .85rem;
+    font-family: var(--font-mono); font-size: .72rem; color: var(--text);
+  }
+
+  .warning-box {
+    background: rgba(244,162,97,.08); border: 1px solid rgba(244,162,97,.25);
+    border-radius: 10px; padding: 1rem 1.25rem; margin-top: 1.5rem;
+    font-size: .875rem; color: #f4c28c; display: flex; gap: .75rem; align-items: flex-start;
+  }
+
+  .train-btn-wrap { text-align: center; margin-top: 1.75rem; }
+  .btn-train {
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    color: #000; font-size: 1rem; padding: .9rem 2.5rem;
+    border-radius: 10px; font-weight: 700; letter-spacing: 1px;
+    border: none; cursor: pointer; text-decoration: none;
+    display: inline-flex; align-items: center; gap: .6rem;
+    font-family: var(--font-mono); text-transform: uppercase;
+    transition: all .2s;
+  }
+  .btn-train:hover { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(0,212,255,.4); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div class="section-label">Machine Learning</div>
+  <h2>CNN Model Training</h2>
+</div>
+
+<div class="train-grid">
+  <!-- Hyperparameters -->
+  <div class="config-card">
+    <div class="scanline"></div>
+    <div class="section-label">Configuration</div>
+    <h3 style="color:#fff; margin-bottom:.25rem; font-size:1.1rem;">Training Hyperparameters</h3>
+    <ul class="param-list">
+      <li class="param-item"><span class="param-key">Image Size</span><span class="param-val">128 × 128</span></li>
+      <li class="param-item"><span class="param-key">Batch Size</span><span class="param-val">32</span></li>
+      <li class="param-item"><span class="param-key">Epochs</span><span class="param-val">10</span></li>
+      <li class="param-item"><span class="param-key">Optimizer</span><span class="param-val">Adam</span></li>
+      <li class="param-item"><span class="param-key">Loss</span><span class="param-val">Categorical CE</span></li>
+      <li class="param-item"><span class="param-key">Test Split</span><span class="param-val">20%</span></li>
+      <li class="param-item"><span class="param-key">Classes</span><span class="param-val">Benign / Malignant</span></li>
+    </ul>
+  </div>
+
+  <!-- Architecture -->
+  <div class="config-card">
+    <div class="section-label">Architecture</div>
+    <h3 style="color:#fff; margin-bottom:.25rem; font-size:1.1rem;">CNN Layer Stack</h3>
+    <div class="arch-diagram">
+      <div class="layer-block">
+        <span>Conv2D (32, 3×3, ReLU)</span><span>Input: 128×128×1</span>
+      </div>
+      <div class="layer-arrow">↓</div>
+      <div class="layer-block pool">
+        <span>MaxPooling2D (2×2)</span><span>Downsample</span>
+      </div>
+      <div class="layer-arrow">↓</div>
+      <div class="layer-block">
+        <span>Conv2D (64, 3×3, ReLU)</span><span>Feature Map</span>
+      </div>
+      <div class="layer-arrow">↓</div>
+      <div class="layer-block pool">
+        <span>MaxPooling2D (2×2)</span><span>Downsample</span>
+      </div>
+      <div class="layer-arrow">↓</div>
+      <div class="layer-block pool">
+        <span>Flatten</span><span>1D Vector</span>
+      </div>
+      <div class="layer-arrow">↓</div>
+      <div class="layer-block dense">
+        <span>Dense (128, ReLU) + Dropout (0.5)</span><span>FC Layer</span>
+      </div>
+      <div class="layer-arrow">↓</div>
+      <div class="layer-block out">
+        <span>Dense (2, Softmax)</span><span>Output</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Data Augmentation -->
+<div class="config-card" style="margin-bottom:1.5rem;">
+  <div class="section-label">Data Augmentation</div>
+  <h3 style="color:#fff; margin-bottom:.25rem; font-size:1.1rem;">Applied Transformations</h3>
+  <div class="aug-grid">
+    <div class="aug-item">✦ Rotation ±20°</div>
+    <div class="aug-item">✦ Width Shift ±0.2</div>
+    <div class="aug-item">✦ Height Shift ±0.2</div>
+    <div class="aug-item">✦ Shear 0.2</div>
+    <div class="aug-item">✦ Zoom 0.2</div>
+    <div class="aug-item">✦ Horizontal Flip</div>
+    <div class="aug-item">✦ Fill: Nearest</div>
+  </div>
+</div>
+
+<div class="warning-box">
+  ⚠️ Training will load all images from the dataset directory, run 10 epochs with augmentation,
+  and may take several minutes depending on dataset size and hardware.
+</div>
+
+<div class="train-btn-wrap">
+  <a href="{% url 'scores' %}" class="btn-train">⚙️ Start Training &amp; Evaluate →</a>
+</div>
+
+{% endblock %}

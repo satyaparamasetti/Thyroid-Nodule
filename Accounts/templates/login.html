@@ -1,0 +1,87 @@
+{% extends 'base.html' %}
+{% block title %}User Login — Thyroid{% endblock %}
+{% block extra_head %}
+<style>
+  .auth-wrap {
+    min-height: calc(100vh - 120px);
+    display: flex; align-items: center; justify-content: center;
+    padding: 3rem 1rem;
+  }
+  .auth-panel {
+    width: 100%; max-width: 440px;
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; overflow: hidden;
+    position: relative;
+  }
+  .auth-header {
+    padding: 2rem 2rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(135deg, rgba(0,119,182,.12), transparent);
+    position: relative;
+  }
+  .auth-header-icon {
+    width: 52px; height: 52px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 24px; margin-bottom: 1rem;
+  }
+  .auth-header h2 { font-size: 1.6rem; color: #fff; margin-bottom: .25rem; }
+  .auth-header p  { font-size: .875rem; color: var(--muted); }
+  .auth-body { padding: 2rem; }
+  .auth-footer {
+    padding: 1rem 2rem;
+    border-top: 1px solid var(--border);
+    font-size: .85rem; color: var(--muted); text-align: center;
+  }
+  .auth-footer a { color: var(--accent); text-decoration: none; }
+  .btn-full { width: 100%; justify-content: center; margin-top: .5rem; padding: .85rem; }
+
+  /* watermark ring */
+  .auth-panel::after {
+    content: '';
+    position: absolute; bottom: -60px; right: -60px;
+    width: 200px; height: 200px; border-radius: 50%;
+    border: 1px solid rgba(0,212,255,.06);
+    box-shadow: 0 0 0 30px rgba(0,212,255,.04), 0 0 0 60px rgba(0,212,255,.02);
+    pointer-events: none;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="auth-wrap">
+  <div class="auth-panel">
+    <div class="scanline"></div>
+    <div class="auth-header">
+      <div class="auth-header-icon">👤</div>
+      <h2>User Login</h2>
+      <p>Access the ThyroScan detection portal</p>
+    </div>
+    <div class="auth-body">
+      {% for message in messages %}
+        <div class="alert {% if message.tags == 'error' %}alert-error{% else %}alert-success{% endif %}">
+          {{ message }}
+        </div>
+      {% endfor %}
+
+      <form method="POST">
+        {% csrf_token %}
+        <div class="form-group">
+          <label>User ID</label>
+          <input type="text" name="userid" placeholder="Enter your user ID" required />
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" name="password" placeholder="••••••••" required />
+        </div>
+        <button type="submit" class="btn btn-primary btn-full">
+          Login →
+        </button>
+      </form>
+    </div>
+    <div class="auth-footer">
+      Don't have an account? <a href="{% url 'register' %}">Register here</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
