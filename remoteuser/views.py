@@ -17,15 +17,16 @@ def Training(request):
     return render(request, 'remoteuser/build.html')
 
 # ============================================================
-import numpy as np
-import tensorflow as tf
-from tensorflow.keras import layers, models
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, confusion_matrix
-import cv2
 from django.conf import settings
 
 def scores(request):
+    import numpy as np
+    import tensorflow as tf
+    from tensorflow.keras import layers, models
+    from sklearn.model_selection import train_test_split
+    from sklearn.metrics import classification_report, confusion_matrix
+    import cv2
+
     IMG_SIZE = (128, 128)
     BATCH_SIZE = 32
     EPOCHS = 10
@@ -134,29 +135,55 @@ def scores(request):
     return render(request, 'remoteuser/scores.html', context)
 
 
-# ============================================================
-from transformers import AutoImageProcessor, AutoModelForImageClassification
-import torch
-from PIL import Image
+import os
+from django.conf import settings
 
-processor   = AutoImageProcessor.from_pretrained(
-    "agent593/Thyroid-Ultrasound-Image-Classification-EfficientNetModel"
-)
-effnet_model = AutoModelForImageClassification.from_pretrained(
-    "agent593/Thyroid-Ultrasound-Image-Classification-EfficientNetModel"
-)
+ort_session = None
+id2label = {0: 'benign', 1: 'malignant', 2: 'normal thyroid'}
+
+def get_onnx_session():
+    import onnxruntime as ort
+    global ort_session
+    if ort_session is None:
+        model_path = os.path.join(settings.BASE_DIR, 'efficientnet.onnx')
+        ort_session = ort.InferenceSession(model_path)
+    return ort_session
 
 def classify_image(request):
+    from PIL import Image
+    import numpy as np
+    
     predicted_label = None
     try:
         if request.method == 'POST' and request.FILES.get('image'):
+            # Fetch ONNX session
+            session = get_onnx_session()
+            
             image_file = request.FILES['image']
-            image      = Image.open(image_file)
-            inputs     = processor(images=image, return_tensors="pt")
-            with torch.no_grad():
-                outputs = effnet_model(**inputs)
-            predicted_class_idx = outputs.logits.argmax(-1).item()
-            predicted_label     = effnet_model.config.id2label[predicted_class_idx]
+            image = Image.open(image_file).convert("RGB")
+            
+            # Preprocess image as HuggingFace AutoImageProcessor would
+            # resize to 224x224
+            image = image.resize((224, 224), Image.Resampling.BILINEAR)
+            # convert to numpy array and scale to [0, 1]
+            img_array = np.array(image, dtype=np.float32) / 255.0
+            # normalize with imagenet mean and std
+            mean = np.array([0.485, 0.456, 0.406], dtype=np.float32)
+            std = np.array([0.229, 0.224, 0.225], dtype=np.float32)
+            img_array = (img_array - mean) / std
+            # standard HWC -> CHW format
+            img_array = np.transpose(img_array, (2, 0, 1))
+            # add batch dimension
+            pixel_values = np.expand_dims(img_array, axis=0)
+            
+            # Run inference
+            inputs = {session.get_inputs()[0].name: pixel_values}
+            outputs = session.run(None, inputs)
+            logits = outputs[0]
+            
+            predicted_class_idx = np.argmax(logits, axis=-1)[0]
+            predicted_label = id2label.get(predicted_class_idx, "Unknown")
+            
         return render(request, 'remoteuser/detection.html', {'predicted_label': predicted_label})
     except Exception as e:
         print("classify_image error:", e)

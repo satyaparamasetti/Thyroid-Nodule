@@ -196,3 +196,5 @@ wrapt==1.16.0
 zipp==3.18.2
 zope.interface==7.0.1
 gunicorn
+
+onnxruntime
