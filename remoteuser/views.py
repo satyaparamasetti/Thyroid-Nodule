@@ -73,15 +73,14 @@ def classify_image(request):
                 return render(request, 'remoteuser/detection.html', {'predicted_label': 'Invalid image'})
                 
             # 2. Check if the image has too much color (ultrasounds and X-rays are largely grayscale)
-            # A true grayscale image has color variance near 0. We'll use a strict threshold.
+            # Relaxed threshold to support grayscale images with some tint or artifacts
             color_variance = np.mean(np.var(raw_array, axis=2))
-            if color_variance > 15:
+            if color_variance > 60:
                 print(f"Invalid image due to color variance: {color_variance}")
                 return render(request, 'remoteuser/detection.html', {'predicted_label': 'Invalid image'})
                 
             # 3. Check for extremely bright images (like white documents or text screenshots)
-            # Normal X-Rays and Ultrasounds have plenty of dark areas.
-            if np.mean(raw_array) > 200:
+            if np.mean(raw_array) > 220:
                 print(f"Invalid image due to high brightness: {np.mean(raw_array)}")
                 return render(request, 'remoteuser/detection.html', {'predicted_label': 'Invalid image'})
 
@@ -106,18 +105,8 @@ def classify_image(request):
             logits = outputs[0][0] # remove batch dim
             
             # Calculate Softmax Confidences
-            exps = [np.exp(i) for i in logits]
-            sum_exps = sum(exps)
-            softmax = [j / sum_exps for j in exps]
-            confidence = max(softmax)
             predicted_class_idx = np.argmax(logits, axis=-1)
-            
-            # 4. Model confidence threshold
-            if confidence < 0.65:
-                print(f"Invalid image due to low confidence: {confidence}")
-                predicted_label = "Invalid image"
-            else:
-                predicted_label = id2label.get(predicted_class_idx, "Unknown")
+            predicted_label = id2label.get(predicted_class_idx, "Unknown")
             
         return render(request, 'remoteuser/detection.html', {'predicted_label': predicted_label})
     except Exception as e:
