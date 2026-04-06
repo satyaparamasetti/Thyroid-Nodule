@@ -88,8 +88,24 @@ def classify_image(request):
             logits = outputs[0][0] # remove batch dim
             
             # Calculate Softmax Confidences
+            exps = [np.exp(i) for i in logits]
+            sum_exps = sum(exps)
+            softmax = [j / sum_exps for j in exps]
+            confidence = max(softmax)
             predicted_class_idx = np.argmax(logits, axis=-1)
-            predicted_label = id2label.get(predicted_class_idx, "Unknown")
+            
+            # Validate if it's a medical image based on color variance and model confidence
+            raw_array = np.array(image)
+            color_variance = np.mean(np.var(raw_array, axis=2))
+            
+            # Medical images (X-rays/Ultrasounds) are mostly grayscale, even if photos are taken of them.
+            # Real photos (dogs, flowers) have very high color variance (> 500).
+            # We also check that the model is at least 45% confident (random is 33%).
+            if color_variance > 400 or confidence < 0.45:
+                print(f"Invalid image detected. Color var: {color_variance}, Confidence: {confidence}")
+                predicted_label = "Invalid image"
+            else:
+                predicted_label = id2label.get(predicted_class_idx, "Unknown")
             
         return render(request, 'remoteuser/detection.html', {'predicted_label': predicted_label})
     except Exception as e:
