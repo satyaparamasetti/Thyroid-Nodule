@@ -97,29 +97,23 @@ def classify_image(request):
             # Validate if it's a medical image based on color variance and model confidence
             raw_array = np.array(image)
             color_variance = np.mean(np.var(raw_array, axis=2))
-            
-            # FINAL STRICT LOGIC: Detect only high-confidence Medical Scans
-            # 1. Color Check: Medical scans are strictly grayscale. 
-            # We reduce the threshold to 50 (very strict) to block even slightly colored photos.
-            if color_variance > 50:
-                print(f"REJECTED: Too much color ({color_variance:.2f}). Not a medical scan.")
-                predicted_label = "Invalid image"
-            
-            # 2. Blank/Flat Check: Blocks white paper, documents, or black screens.
-            elif np.var(raw_array) < 100:
-                print(f"REJECTED: Image is too flat/blank (Var: {np.var(raw_array):.2f}).")
-                predicted_label = "Invalid image"
-                
-            # 3. Confidence Check: Even if grayscale, it must look like a Thyroid.
-            # If the AI is less than 65% sure, it's likely a random grayscale object.
-            elif confidence < 0.65:
-                print(f"REJECTED: Not a clear medical scan (Confidence: {confidence:.4f}).")
-                predicted_label = "Invalid image"
-                
+            # ULTRA-SAFE BALANCED LOGIC:
+            # 1. Color Check: Medical scans like X-rays are grayscale.
+            # If color variance is low, we trust it is a medical scan.
+            if color_variance < 300: 
+                # 2. Blank/Flat Check: Blocks screenshots of white screens or all-black images.
+                if np.var(raw_array) < 50:
+                    print(f"REJECTED: Flat/Blank image (Var: {np.var(raw_array):.2f})")
+                    predicted_label = "Invalid image"
+                else:
+                    # 3. Medical grayscale image with detail: Give result immediately.
+                    # We no longer check for AI Confidence here so X-rays are NEVER blocked!
+                    predicted_label = id2label.get(predicted_class_idx, "Unknown")
+                    print(f"ACCEPTED: Grayscale Scan. Result: {predicted_label}")
             else:
-                # PASSED ALL CHECKS: It is a valid medical scan.
-                print(f"ACCEPTED: Valid medical scan. Confidence: {confidence:.4f}")
-                predicted_label = id2label.get(predicted_class_idx, "Unknown")
+                # 4. Colorful image (Dogs, Flowers, People): Reject as invalid.
+                print(f"REJECTED: Colorful image (Color Var: {color_variance:.2f})")
+                predicted_label = "Invalid image"
             
         return render(request, 'remoteuser/detection.html', {'predicted_label': predicted_label})
     except Exception as e:
