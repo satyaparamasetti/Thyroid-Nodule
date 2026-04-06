@@ -98,23 +98,28 @@ def classify_image(request):
             raw_array = np.array(image)
             color_variance = np.mean(np.var(raw_array, axis=2))
             
-            # NEW LOGIC: Distinguish between grayscale medical scans and colorful random photos
-            # Medical images (X-rays/Ultrasounds) are almost pure grayscale (0-50 variance).
-            # A phone photo of an X-ray might have some tint (up to 300 variance).
-            # Colorful photos (dogs, people) have very high variance (> 500).
-            
-            if color_variance < 300: 
-                # It is a medical scan. Now check if it's "blank" (all white/black)
-                if np.var(raw_array) < 50:
-                    print(f"Invalid image: Too flat/blank. Var: {np.var(raw_array)}")
-                    predicted_label = "Invalid image"
-                else:
-                    # It's a valid medical scan. Trust the AI prediction.
-                    predicted_label = id2label.get(predicted_class_idx, "Unknown")
-            else:
-                # It is a colorful photo (Not a Thyroid Scan). Reject it.
-                print(f"Invalid image: Too much color. Color var: {color_variance}")
+            # FINAL STRICT LOGIC: Detect only high-confidence Medical Scans
+            # 1. Color Check: Medical scans are strictly grayscale. 
+            # We reduce the threshold to 50 (very strict) to block even slightly colored photos.
+            if color_variance > 50:
+                print(f"REJECTED: Too much color ({color_variance:.2f}). Not a medical scan.")
                 predicted_label = "Invalid image"
+            
+            # 2. Blank/Flat Check: Blocks white paper, documents, or black screens.
+            elif np.var(raw_array) < 100:
+                print(f"REJECTED: Image is too flat/blank (Var: {np.var(raw_array):.2f}).")
+                predicted_label = "Invalid image"
+                
+            # 3. Confidence Check: Even if grayscale, it must look like a Thyroid.
+            # If the AI is less than 65% sure, it's likely a random grayscale object.
+            elif confidence < 0.65:
+                print(f"REJECTED: Not a clear medical scan (Confidence: {confidence:.4f}).")
+                predicted_label = "Invalid image"
+                
+            else:
+                # PASSED ALL CHECKS: It is a valid medical scan.
+                print(f"ACCEPTED: Valid medical scan. Confidence: {confidence:.4f}")
+                predicted_label = id2label.get(predicted_class_idx, "Unknown")
             
         return render(request, 'remoteuser/detection.html', {'predicted_label': predicted_label})
     except Exception as e:
