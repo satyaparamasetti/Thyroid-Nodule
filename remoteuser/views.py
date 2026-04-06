@@ -98,14 +98,23 @@ def classify_image(request):
             raw_array = np.array(image)
             color_variance = np.mean(np.var(raw_array, axis=2))
             
-            # Medical images (X-rays/Ultrasounds) are mostly grayscale, even if photos are taken of them.
-            # Real photos (dogs, flowers) have very high color variance (> 500).
-            # We also check that the model is at least 45% confident (random is 33%).
-            if color_variance > 400 or confidence < 0.45:
-                print(f"Invalid image detected. Color var: {color_variance}, Confidence: {confidence}")
-                predicted_label = "Invalid image"
+            # NEW LOGIC: Distinguish between grayscale medical scans and colorful random photos
+            # Medical images (X-rays/Ultrasounds) are almost pure grayscale (0-50 variance).
+            # A phone photo of an X-ray might have some tint (up to 300 variance).
+            # Colorful photos (dogs, people) have very high variance (> 500).
+            
+            if color_variance < 300: 
+                # It is a medical scan. Now check if it's "blank" (all white/black)
+                if np.var(raw_array) < 50:
+                    print(f"Invalid image: Too flat/blank. Var: {np.var(raw_array)}")
+                    predicted_label = "Invalid image"
+                else:
+                    # It's a valid medical scan. Trust the AI prediction.
+                    predicted_label = id2label.get(predicted_class_idx, "Unknown")
             else:
-                predicted_label = id2label.get(predicted_class_idx, "Unknown")
+                # It is a colorful photo (Not a Thyroid Scan). Reject it.
+                print(f"Invalid image: Too much color. Color var: {color_variance}")
+                predicted_label = "Invalid image"
             
         return render(request, 'remoteuser/detection.html', {'predicted_label': predicted_label})
     except Exception as e:
