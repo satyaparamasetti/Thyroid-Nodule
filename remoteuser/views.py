@@ -97,21 +97,25 @@ def classify_image(request):
             # Validate if it's a medical image based on color variance and model confidence
             raw_array = np.array(image)
             color_variance = np.mean(np.var(raw_array, axis=2))
-            # ULTRA-SAFE BALANCED LOGIC:
+            # FINAL STRICT MEDICAL LOGIC:
             # 1. Color Check: Medical scans like X-rays are grayscale.
-            # If color variance is low, we trust it is a medical scan.
-            if color_variance < 300: 
+            # We strictly limit color variance to 150 to block colorful photos.
+            if color_variance < 150: 
                 # 2. Blank/Flat Check: Blocks screenshots of white screens or all-black images.
                 if np.var(raw_array) < 50:
                     print(f"REJECTED: Flat/Blank image (Var: {np.var(raw_array):.2f})")
                     predicted_label = "Invalid image"
+                # 3. Confidence Check: Even if grayscale, AI must be at least 35% sure.
+                # (Random guessing is 33%, so 35% ensures it's more than a guess).
+                elif confidence < 0.35:
+                    print(f"REJECTED: Low AI Confidence ({confidence:.4f})")
+                    predicted_label = "Invalid image"
                 else:
-                    # 3. Medical grayscale image with detail: Give result immediately.
-                    # We no longer check for AI Confidence here so X-rays are NEVER blocked!
+                    # 4. Valid medical grayscale image with detail: Give result.
                     predicted_label = id2label.get(predicted_class_idx, "Unknown")
-                    print(f"ACCEPTED: Grayscale Scan. Result: {predicted_label}")
+                    print(f"ACCEPTED: Medical Scan. Result: {predicted_label}")
             else:
-                # 4. Colorful image (Dogs, Flowers, People): Reject as invalid.
+                # 5. Colorful image (Dogs, Flowers, People): Reject as invalid.
                 print(f"REJECTED: Colorful image (Color Var: {color_variance:.2f})")
                 predicted_label = "Invalid image"
             
