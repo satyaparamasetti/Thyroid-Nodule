@@ -67,23 +67,6 @@ def classify_image(request):
                 pass
 
             
-            # 1. Check if the image is too flat/blank (e.g., all black or all white)
-            if np.var(raw_array) < 10:
-                print("Invalid image due to variance < 10")
-                return render(request, 'remoteuser/detection.html', {'predicted_label': 'Invalid image'})
-                
-            # 2. Check if the image has too much color (ultrasounds and X-rays are largely grayscale)
-            # Relaxed threshold to support grayscale images with some tint or artifacts
-            color_variance = np.mean(np.var(raw_array, axis=2))
-            if color_variance > 60:
-                print(f"Invalid image due to color variance: {color_variance}")
-                return render(request, 'remoteuser/detection.html', {'predicted_label': 'Invalid image'})
-                
-            # 3. Check for extremely bright images (like white documents or text screenshots)
-            if np.mean(raw_array) > 220:
-                print(f"Invalid image due to high brightness: {np.mean(raw_array)}")
-                return render(request, 'remoteuser/detection.html', {'predicted_label': 'Invalid image'})
-
             # --- Preprocessing ---
             # Preprocess image as HuggingFace AutoImageProcessor would
             # resize to 224x224
