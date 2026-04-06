@@ -1,11 +1,13 @@
 {
   "name": "ThyroScan AI",
   "short_name": "ThyroScan",
-  "description": "Thyroid Nodule Detection App",
+  "description": "Professional Thyroid Nodule Detection Powered by AI",
   "start_url": "/",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#060d14",
   "theme_color": "#00d4ff",
+  "categories": ["medical", "health"],
   "icons": [
     {
       "src": "/static/icon-192.png",
@@ -18,6 +20,13 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Classify Image",
+      "url": "/remoteuser/classify/",
+      "icons": [{ "src": "/static/icon-192.png", "sizes": "192x192" }]
     }
   ]
 }
